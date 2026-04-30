@@ -27,43 +27,56 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix
 
 IMG_SIZE = 128
+# 5 global + 1 edge + 1 laplacian + 3 quadrant + 16 histogram + 1 centre + 1 gradient = 28
+N_FEATURES = 28
 
 
 def extract_features(img: Image.Image) -> np.ndarray:
     gray = np.array(img.convert("L").resize((IMG_SIZE, IMG_SIZE)), dtype=np.float32)
     norm = gray / 255.0
 
-    feats = [
+    feats = []
+
+    # 1. Global stats (5)
+    feats += [
         norm.mean(), norm.std(),
         np.percentile(norm, 25), np.percentile(norm, 75),
         norm.max() - norm.min(),
     ]
 
+    # 2. Canny edge density (1)
     edges = cv2.Canny(gray.astype(np.uint8), 50, 150)
     feats.append(edges.mean())
 
+    # 3. Laplacian variance (1)
     lap = cv2.Laplacian(gray.astype(np.uint8), cv2.CV_64F)
     feats.append(lap.var())
 
+    # 4. Quadrant asymmetry (3)
     h, w = gray.shape
     q1 = norm[:h//2, :w//2].mean()
     q2 = norm[:h//2, w//2:].mean()
     q3 = norm[h//2:, :w//2].mean()
     q4 = norm[h//2:, w//2:].mean()
-    feats += [abs(q1-q4), abs(q2-q3), np.std([q1, q2, q3, q4])]
+    feats += [abs(q1 - q4), abs(q2 - q3), float(np.std([q1, q2, q3, q4]))]
 
-    hist, _ = np.histogram(norm.ravel(), bins=16, range=(0, 1))
-    feats += (hist / hist.sum()).tolist()
+    # 5. Histogram (16)
+    hist, _ = np.histogram(norm.ravel(), bins=16, range=(0.0, 1.0))
+    feats += (hist / (hist.sum() + 1e-9)).tolist()
 
-    cx, cy = w//4, h//4
-    centre = norm[cy:3*cy, cx:3*cx].mean()
+    # 6. Centre-surround ratio (1)
+    cx, cy = w // 4, h // 4
+    centre = norm[cy: 3 * cy, cx: 3 * cx].mean()
     feats.append(centre / (norm.mean() + 1e-6))
 
+    # 7. Gradient magnitude mean (1)
     gx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     gy = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-    feats.append(np.sqrt(gx**2 + gy**2).mean())
+    feats.append(float(np.sqrt(gx ** 2 + gy ** 2).mean()))
 
-    return np.array(feats, dtype=np.float32)
+    result = np.array(feats, dtype=np.float32)
+    assert result.shape[0] == N_FEATURES, f"Feature count {result.shape[0]} != {N_FEATURES}"
+    return result
 
 
 def load_dataset(data_dir: str):
