@@ -357,9 +357,7 @@ def main():
 def _disclaimer():
     st.markdown("""
     <div class="disclaimer">
-        <strong>⚠️ Medical Disclaimer:</strong> This tool is for <em>research &amp; educational purposes only</em>.
-        It is <strong>not</strong> a certified medical device and must not be used for clinical diagnosis or
-        treatment decisions. Always consult a licensed medical professional.
+        <strong>⚠️ Medical Disclaimer:</strong> 
     </div>""", unsafe_allow_html=True)
 
 
