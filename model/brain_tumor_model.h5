@@ -1,0 +1,7 @@
+## Option A: Clone Repo
+
+```bash
+git clone https://github.com/YOUR-USERNAME/brain-tumor-streamlit.git
+cd brain-tumor-streamlit
+pip install -r requirements.txt
+streamlit run app.py
